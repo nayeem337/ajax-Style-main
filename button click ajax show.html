@@ -1,0 +1,59 @@
+
+
+
+button click ajax data show , axios
+
+first ->URL 
+
+    Route::get('/user-get-schedule-data-ajax', [HomePageController::class ,'getSchedule'])->name('getSchedule');
+
+2nd -> condition 
+
+ public function getSchedule(){
+        $schedule = UserTradeModel::where('status', 2)->where('user_id', auth()->user()->id)->orderBy('created_at' , 'desc')->get();
+        return response()->json(
+            [
+                'Schedule'=>$schedule,
+            ]
+        );
+    }
+
+3d -> blade 
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+const scheduleHistoryButton = document.getElementById('ex2-tab-2');
+        scheduleHistoryButton.addEventListener('click', function () {
+            let url = "/user/user-get-schedule-data-ajax";
+            axios.get(url).then(
+                function (response) {
+                    var scheduleData = response.data.Schedule;
+                    var scheduleTable = '<table class="table table-responsive table-hover table-borderless  text-center" style="border: 1px dashed rgba(42,245,152,0.62);">';
+                    scheduleTable += '<tr style="border:1px dashed rgba(42,245,152,0.62); color: #009953">';
+                    scheduleTable += '<th style="font-size: 12px;">Type</th>';
+                    scheduleTable += '<th style="font-size: 12px;">Amount</th>';
+                    scheduleTable += '<th style="font-size: 12px;">Income</th>';
+                    scheduleTable += '<th style="font-size: 12px;">Time</th>';
+                    scheduleTable += '<th style="font-size: 12px;">Action</th>';
+                    scheduleTable += '</tr>';
+
+                    scheduleData.forEach(function (item) {
+                        scheduleTable += '<tr>';
+                        scheduleTable += '<td style="font-size: 12px;">' + item.type + '</td>';
+                        scheduleTable += '<td style="font-size: 12px;">' + parseFloat(item.amount).toFixed(2) + '</td>';
+                        scheduleTable += '<td style="font-size: 12px;">' + parseFloat(item.income).toFixed(2) + '</td>';
+                        scheduleTable += '<td style="font-size: 12px;">' + item.date + '</td>';
+                        scheduleTable += '<td style="font-size: 12px;">' + '<span data-id="' + item.id + '"  style="font-size: 16px; color: red ; cursor: pointer " onclick="if (confirm(\'Are you sure?\')) { ScheduleDelete(this); }">X</span>' + '</td>';
+                        scheduleTable += '</tr>';
+                    });
+
+                    scheduleTable += '</table> <br><br><br><br>';
+
+                    document.getElementById('ex2-pills-2').innerHTML = scheduleTable;
+                }
+            ).catch(
+                function (error) {
+                    //
+                }
+            )
+        })
+
+

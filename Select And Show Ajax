@@ -1,0 +1,125 @@
+Route ->
+Route::post('/sup-store',[AssignFeeController::class,'upStore'])->name('upStore');
+<===========================================>
+Controller -> 
+public  function upStore(Request $request)
+{
+//    return $request->all();
+    if (!empty($request->select)) {
+        foreach ($request->select as $paymentHead => $select) {
+             AssignFee::where('id', $select)
+                ->update([
+                    'year_id' => $request->year_id,
+                    'select' => 1,
+                    'membercategory_id' => $request->membercategory_id,
+                    'paymenthead_id' => $request->paymenthead_id[$paymentHead],
+                    'LastPaymentDate' => date('Y-m-d', strtotime($request->LastPaymentDate[$paymentHead])),
+                    'Amount' => $request->Amount[$paymentHead],
+                ]);
+            return redirect()->back();
+        }
+    }
+
+}
+<========================================================>
+Select Option ->
+
+  <div class="col-12 col-md-12 col-xs-6">
+            <div class="widget-box">
+                <div class="row justify-content-center" style="margin-top: 15px;">
+                    <div class="col-md-12 col-12">
+                        {{-- year dropdown --}}
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label no-padding-right" for="year-select">Year:</label>
+                            <div class="col-sm-5">
+                                <select type="text" id="year_id" name="year_id" class="col-xs-11 col-sm-11 col-md-11">
+                                    <option value="">Select Year</option>
+                                    @foreach ($sessions as $session)
+                                        <option value="{{ $session->id }}">{{ $session->sessionName }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 col-12">
+                        {{-- member category dropdown --}}
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label no-padding-right" for="category-select">Member
+                                Category:</label>
+                            <div class="col-sm-5">
+                                <select type="text" id="category-select" onchange="membercategory()"
+                                        name="membercategory_id"
+                                        class="col-xs-11 col-sm-11 col-md-11">
+                                    <option value="">Select Member Category</option>
+                                    @foreach ($memberCategories as $memberCategory)
+                                        <option
+                                            value="{{ $memberCategory->id }}">{{ $memberCategory->memberCategoryName }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+<==================================================================>
+ajax->
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  $(document).on('change', '#category-select', function () {
+            let btype = $(this).val();
+            let fyear = document.getElementById('year_id').value;
+            $.ajax({
+                type: 'GET',
+                url: 'check-assignments',
+                data: {
+                    year_id: fyear,
+                    'category-select': btype
+                },
+                success: function (data) {
+                    console.log(data.data);
+                    $('#salesTable tbody').empty();
+                    data.data.forEach(function(item, index) {
+                        const newRowHtml = `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>
+                           <div class="checkbox">
+                            <label>
+                              <input type="checkbox" class="is-old-checkbox"id="${ item.id }" name="select[]" value="${ item.id }">
+                             </label>
+                          </div>
+                       </td>
+                        <td>
+                            <input type="hidden" name="paymenthead_id[]" value="${ item.paymenthead_id }">
+                            <input type="hidden" name="id[]" value="${ item.id }">
+                            ${item.payment_head.PaymentHeadName}
+                        </td>
+                        <td><input id="LastPaymentDate${index}" name="LastPaymentDate[]" type="date" value="${item.LastPaymentDate}"></td>
+                        <td><input id="Amount${index}" name="Amount[]" value="${item.Amount}" type="text"></td>
+                    </tr>
+                `;
+                        $('#salesTable tbody').append(newRowHtml);
+                    });
+                    $('#salesTable').show();
+                }
+            });
+        });
+
+<=================================================================>
+blade->
+  <table id="salesTable" class="table table-striped table-bordered table-hover">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Select</th>
+                                <th>Payment Head</th>
+                                <th>Last Payment Date</th>
+                                <th>Amount</th>
+                            </tr>
+                            </thead>
+                              <tbody>
+                              </tbody>
+                            </table>

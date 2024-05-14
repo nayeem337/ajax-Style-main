@@ -1,0 +1,126 @@
+input field 
+
+<input name="qr_code" type="text" class="form-control" id="searchInput" value="{{ old('qr_code') }}">
+
+
+route 
+    Route::get('productsSearch', [QRCodeGenerateController::class, 'search'])->name('productsSearch');
+
+
+
+controller 
+  public function search(Request $request)
+    {
+
+        $all_qr_codes = QRCodeGenerateDetail::when($request->has('qr_code'), function ($query) use ($request) {
+                return $query->where('qr_code', 'like', '%' . $request->input('qr_code') . '%');
+            })->with('customer','qr_product.unit','qr_product.product')
+            ->paginate(28);
+      $data =[];
+      foreach ($all_qr_codes as $qr_codes)
+
+      {
+
+          $f = $qr_codes->toArray();
+          $f['img']= base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::size(150)->generate($qr_codes->qr_code));
+          $data[]=  $f ;
+      }
+
+        return response()->json($data);
+    }
+
+
+query 
+
+  @php
+        $pdfRoute =route('product.qr_individual.pdf', ':id') ;
+
+  
+    @endphp
+
+
+
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+
+        $('#searchInput').keyup(function () {
+            var searchInput = $(this).val();
+
+            $.ajax({
+                url: "{{ route('product.productsSearch') }}",
+                type: "GET",
+                data: {qr_code: searchInput},
+                dataType: "json",
+                success: function (response) {
+                    // console.log(response);
+                    displaySearchResults(response);
+                },
+                error: function (xhr, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            });
+        });
+
+
+
+
+
+    function displaySearchResults(results) {
+            var searchResults = $('#searchResults');
+            searchResults.empty();
+        console.log(results)
+
+            if (results.length === 0) {
+                searchResults.append('<li>No results found.</li>');
+            } else {
+                $.each(results, function (index, item) {
+                    console.log(index, item)
+
+                    var productName = item.qr_product ? item.qr_product.product.name : '';
+                    var unitName = item.qr_product ? item.qr_product.unit.name : '';
+                    var rout = {!! json_encode($pdfRoute) !!};
+                        rout  = rout.replace(':id', item.id)
+                    var qr = "data:image/svg+xml;base64," + item.img;
+                    var listItem = `
+                <div class="col-md-2 qr_card" style="margin-top:5px; width: 22%; margin-bottom: 15px;">
+                    <div class="${item.status == 1 ? 'qr_body_used' : 'qr_body'}">
+                        <div class="text-center">
+                       <br>
+                           <img src="${qr}" alt="QR Code Image">
+                            <strong style="color: black">${item.qr_code}</strong>
+                        </div>
+                        <div class="description text-left" style="padding: 12px;color: black">
+                            <strong>Product Name: ${productName}  </strong><br>
+                            <strong>Unit: ${unitName}  </strong><br>
+                            <strong style="font-size: 16px; color: black">Prize Amount : <span>${item.prize_amount}</span></strong>
+                        </div>
+                    </div>
+                    <div class="${item.status == 1 ? 'overlay_used' : 'overlay'}">
+                        <div class="text">
+                            ${item.customer_id != null ? `This QR Code (${item.qr_code}) was used by ${item.customer.name} (${item.customer.generate_id})` : `Not Used Yet ${item.qr_code}`}
+                            <div class="dropdown">
+                                <button class="btn btn-xs btn-success dropdown-toggle" type="button" data-toggle="dropdown">
+                                    <i class="fa fa-download"></i>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                  <li>
+                                    <a href="${rout}" target="_blank"><i class="fa fa-file-pdf-o"></i> <strong>PDF</strong></a>
+                                  </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+                    searchResults.append(listItem);
+                });
+            }
+        }
+
+
+    </script>
+
+
+

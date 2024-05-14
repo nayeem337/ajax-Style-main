@@ -1,0 +1,122 @@
+
+
+search ajax system 
+
+first -> route 
+
+Route::get('productsSearch', [SearsController::class, 'search'])->name('productsSearch');
+
+2nd - > condition 
+
+ public function search(Request $request)
+
+    {
+
+
+
+
+        $zid = '100001';
+        $products = Product::where(function ($scan) use ($request, $zid) {
+            $scan->where('zid', $zid);
+            $scan->where('xitem', 'LIKE', '%' . $request->search . '%');
+        })->with(['quantity' => function ($query) use ($request, $zid) {
+            $query->where('xitem', 'LIKE', '%' . $request->search . '%')
+                ->where('zid', $zid);
+        }])
+            ->take(9)
+            ->get();
+
+        foreach ($products as $item) {
+            $total = 0;
+            foreach ($item->quantity as $quantity) {
+                $total += $quantity->xqty * $quantity->xsign;
+            }
+            $item->quantity_total = $total;
+        }
+
+        return response()->json($products);
+
+    }
+
+
+3d -> result section 
+
+ @foreach($products as $key => $product)
+                 <a href="javascript:void(0)" class="card-info">
+
+                     <span id="searchResults"></span>
+                     <div id="product-list"></div>
+
+                </a>
+
+
+@endforeach
+
+
+
+4th->  searche section 
+  <input type="text" class="form-control rounded-0 search-input" name="search" value="" id="searchInput" placeholder="Scan Your Barcode or SKU" autocomplete="off">
+
+5d -> searche 
+
+ <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    
+  $('#searchInput').keyup(function () {
+            var searchInput = $(this).val();
+
+            $.ajax({
+                url: "{{ route('productsSearch') }}",
+                type: "GET",
+                data: {search: searchInput},
+                dataType: "json",
+                success: function (response) {
+                    // console.log(response)
+                    displaySearchResults(response);
+                },
+                error: function (xhr, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                }
+            });
+        });
+
+        function displaySearchResults(results) {
+            var searchResults = $('#searchResults');
+            searchResults.empty();
+
+            if (results.length === 0) {
+                searchResults.append('<li>No results found.</li>');
+            } else {
+
+
+                $.each(results, function (index, product) {
+                    var listItem = `
+            <div class="col-sm-4  box-shadu" >
+                <div class="search-thumbnail">
+                    <div>
+                        <div class="card gradient-1 product-item" style="background-color: #d3eaf1; border: none; border-radius: 10px;" id="product-item-${product.xitem}" data-product-id="${product.xitem}">
+                           <h5 class="card-header " style="padding: 5px; margin-top: 0px; background-color: #1f2937; color: #fff; border-radius: 10px 10px 0 0;" id="heading"data-milliseconds="">${product.xdesc.substring(0, 17)}..</h5>
+                                    <h5 class="card-header name-product" style="padding: 5px; margin-top:0px ;display:none" id="heading"data-milliseconds="">${product.xdesc}</h5>
+                            <span><div class="sku" style="display:none">${product.xcitem}</div></span>
+                            <span><h6 class="pull-right xitem"  >${product.xitem}</h6></span>
+                            <span><div class="unit" style="display:none">${product.xunitiss}</div></span>
+                            <span><div class="zid" style="display:none">${product.zid}</div></span>
+                            <span><div class="xstdcost" style="display:none">${product.xstdcost}</div></span>
+                            <div class="card-body p-2">
+                                <div class="d-inline-block">
+                                    <h2 class="text-white price-product" style="padding: 5px; color: #1f2937;">${product.xstdprice}</h2>
+                                    <p><span class="pull-right label label-grey quantity"style="display:none">1</span></p>
+                                    <p><span class="pull-right label label-grey qty" >${product.quantity_total}</span></p>
+                                </div>
+                                <span class="float-right display-5 opacity-5"><i class="fa fa-shopping-cart"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+                    searchResults.append(listItem);
+                });
+            }
+        }
+
+    });
